@@ -66,10 +66,7 @@ class TapMongoDB(Tap):
             th.StringType,
             required=True,
         ),
-        th.Property(
-            "prefix_override",
-            th.StringType
-        ),
+        th.Property("prefix_override", th.StringType),
         # Note: All other props are directly passed through to MongoClient
         # additional_properties = {} <- TODO: MongoClient args jsonschema
     ).to_dict()
