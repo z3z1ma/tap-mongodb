@@ -1,0 +1,40 @@
+version: 1
+send_anonymous_usage_stats: true
+project_id: "tap-mongodb"
+environments:
+  - name: dev
+plugins:
+  extractors:
+    - name: "tap-mongodb"
+      namespace: "tap_mongodb"
+      pip_url: -e .
+      capabilities:
+        - state
+        - catalog
+        - discover
+      config:
+        # These are all passed directly through to pymongo MongoClient, ie:
+        host: localhost
+        port: 27017
+        directConnection: true
+        readPreference: secondaryPreferred
+        username: mongo_user
+        password: mongo_pass
+        authSource: admin
+        authMechanism: SCRAM-SHA-1
+        tls: true
+        tlsAllowInvalidHostnames: false
+
+        # These are used after client is initialized, database is required
+        database: "harness"
+        prefix_override: free
+      select:
+        - free_accounts.*
+      metadata:
+        "*":
+          replication_key: lastUpdatedAt
+
+  loaders:
+    - name: target-jsonl
+      variant: andyh1203
+      pip_url: target-jsonl
