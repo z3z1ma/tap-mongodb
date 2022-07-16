@@ -29,8 +29,9 @@ class CollectionStream(Stream):
     # Sent in schema message but not needed
     primary_keys = ["_id"]
 
-    # Yet to find a way to dynamically set this in a schemaless
+    # TODO: Yet to find a way to dynamically set this in a schemaless
     # set-up where the metadata key will determine replication_key
+    # on a per stream basis where it could be time based or non time based
     is_timestamp_replication_key = False
 
     # Schema is dynamically derived on each message
@@ -59,11 +60,23 @@ class TapMongoDB(Tap):
     """MongoDB tap class."""
 
     name = "tap-mongodb"
-    config_jsonschema = th.PropertiesList().to_dict()
+    config_jsonschema = th.PropertiesList(
+        th.Property(
+            "database",
+            th.StringType,
+            required=True,
+        ),
+        th.Property(
+            "prefix_override",
+            th.StringType
+        ),
+        # Note: All other props are directly passed through to MongoClient
+        # additional_properties = {} <- TODO: MongoClient args jsonschema
+    ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
         mut_conf = {k: v for k, v in self.config.items()}
-        prefix = mut_conf.pop("prefix", "")
+        prefix = mut_conf.pop("prefix_override", "")
         db = load_db_from_config(mut_conf)
         return [
             CollectionStream(
