@@ -29,19 +29,27 @@ class CollectionStream(Stream):
     # Sent in schema message but not needed
     primary_keys = ["_id"]
 
-    # Schema is ignored in our target since the entirety of the contents should be
-    # understood to be an object
+    # Yet to find a way to dynamically set this in a schemaless
+    # set-up where the metadata key will determine replication_key
+    is_timestamp_replication_key = False
+
+    # Schema is dynamically derived on each message
+    # the target should wrap and load the data into an unstructured target
     schema = {"properties": {"*": {}}}
 
     def __init__(
-        self, database: Database, collection_name: str, *args, **kwargs
+        self, database: Database, collection_name: str, prefix: str, *args, **kwargs
     ) -> None:
-        self.name = collection_name
+        self.collection_name = collection_name
+        self.name = f"{prefix}_{collection_name}" if prefix else collection_name
         super().__init__(*args, **kwargs)
         self.database = database
 
     def get_records(self, context: Optional[dict]) -> Iterable[dict]:
-        for record in self.database[self.name].find({}):
+        bookmark = self.get_starting_replication_key_value(context)
+        for record in self.database[self.collection_name].find(
+            {self.replication_key: {"$gt": bookmark}} if bookmark else {}
+        ):
             self.schema["properties"] = {k: {} for k in record.keys()}
             replace_encrypted_bytes(record)
             yield record
@@ -55,8 +63,14 @@ class TapMongoDB(Tap):
 
     def discover_streams(self) -> List[Stream]:
         mut_conf = {k: v for k, v in self.config.items()}
+        prefix = mut_conf.pop("prefix", "")
         db = load_db_from_config(mut_conf)
         return [
-            CollectionStream(tap=self, database=db, collection_name=collection)
+            CollectionStream(
+                tap=self,
+                database=db,
+                collection_name=collection,
+                prefix=(prefix or db.name).replace("-", "_"),
+            )
             for collection in db.list_collection_names()
         ]
