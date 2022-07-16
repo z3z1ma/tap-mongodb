@@ -36,7 +36,7 @@ class CollectionStream(Stream):
 
     # Schema is dynamically derived on each message
     # the target should wrap and load the data into an unstructured target
-    schema = {"properties": {"*": {}}}
+    schema = {"properties": {"_id": {"type": "string"}}}
 
     def __init__(
         self, database: Database, collection_name: str, prefix: str, *args, **kwargs
