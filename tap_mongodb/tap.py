@@ -1,23 +1,26 @@
 """MongoDB tap class."""
-from typing import Iterable, List, Optional, Tuple
+import decimal
+from typing import Iterable, List, Optional
 
+import orjson
+import singer.messages
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 
 
-def replace_encrypted_bytes(record: Tuple[dict, List]):
-    if isinstance(record, dict):
-        for k in record:
-            if isinstance(record[k], bytes):
-                record[k] = "****"
-            else:
-                replace_encrypted_bytes(record[k])
-    elif isinstance(record, List):
-        for v in record:
-            replace_encrypted_bytes(v)
-    return record
+def default(obj):
+    if isinstance(obj, decimal.Decimal):
+        return str(obj)
+    elif isinstance(obj, bytes):
+        return "****"
+    raise TypeError
+
+
+singer.messages.format_message = lambda message: orjson.dumps(
+    message.asdict(), default=default
+).decode("utf-8")
 
 
 class CollectionStream(Stream):
@@ -46,7 +49,6 @@ class CollectionStream(Stream):
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
             self.schema["properties"] = {k: {} for k in record.keys()}
-            replace_encrypted_bytes(record)
             yield record
 
 
