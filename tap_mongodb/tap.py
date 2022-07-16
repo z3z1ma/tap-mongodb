@@ -7,11 +7,6 @@ from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 
 
-def load_db_from_config(mut_config: dict) -> Database:
-    database = mut_config.pop("database")
-    return MongoClient(**mut_config).get_database(database)
-
-
 def replace_encrypted_bytes(record: Tuple[dict, List]):
     if isinstance(record, dict):
         for k in record:
@@ -26,7 +21,6 @@ def replace_encrypted_bytes(record: Tuple[dict, List]):
 
 
 class CollectionStream(Stream):
-    # Sent in schema message but not needed
     primary_keys = ["_id"]
 
     # TODO: Yet to find a way to dynamically set this in a schemaless
@@ -73,8 +67,9 @@ class TapMongoDB(Tap):
 
     def discover_streams(self) -> List[Stream]:
         mut_conf = {k: v for k, v in self.config.items()}
+        database = mut_conf.pop("database")
         prefix = mut_conf.pop("prefix_override", "")
-        db = load_db_from_config(mut_conf)
+        db = MongoClient(**mut_conf).get_database(database)
         return [
             CollectionStream(
                 tap=self,
