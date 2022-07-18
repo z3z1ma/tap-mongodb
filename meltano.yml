@@ -1,6 +1,7 @@
 version: 1
 send_anonymous_usage_stats: true
 project_id: "tap-mongodb"
+default_environment: dev
 environments:
   - name: dev
 plugins:
@@ -12,27 +13,58 @@ plugins:
         - state
         - catalog
         - discover
+        - about
+        - stream-maps
+      settings:
+        - name: prefix
+          description:
+            Optionally add a prefix for all streams, useful if ingesting
+            from multiple shards/clusters via independent tap-mongodb configs.
+          value: ""
+        - name: ts_based_replication
+          description: |
+            Each item should correspond to a stream name. A stream mentioned here 
+            indicates it uses timestamp-based replication. The default for a stream is 
+            non-timestamp based since Mongo most often uses epochs. This is required since 
+            the determination of timestamp based replication requires the key exist in the 
+            jsonschema with a date-like type which is impossible when there is no explicit 
+            schema prior to runtime. NOTE: Streams still require `metadata` mapping with an 
+            explicit callout of `replication-key` and `replication-method`.
+          value: []
+        - name: mongo
+          description:
+            These props are passed directly to pymongo MongoClient allowing the
+            tap user full flexibility not provided in any other Mongo tap.
       config:
+        # All streams will be prefixed with `example_`
+        prefix: example_
+        # The stream mentioned in this list indicates that the
+        # metadata replication-key is expected to be timestamp
+        # based overriding the default of non-timestamp based
+        ts_based_replication:
+          - example_mydb_mycollection
         # These are all passed directly through to pymongo MongoClient, ie:
-        host: localhost
-        port: 27017
-        directConnection: true
-        readPreference: secondaryPreferred
-        username: mongo_user
-        password: mongo_pass
-        authSource: admin
-        authMechanism: SCRAM-SHA-1
-        tls: true
-        tlsAllowInvalidHostnames: false
-
-        # These are used after client is initialized, database is required
-        database: "harness"
-        prefix_override: free
+        mongo:
+          host: localhost
+          port: 27017
+          directConnection: true
+          readPreference: secondaryPreferred
+          username: mongodb
+          password: mongodb
+          authSource: admin
+          authMechanism: SCRAM-SHA-1
+          tls: true
       select:
-        - free_accounts.*
+        - "*.*"
       metadata:
-        "*":
-          replication_key: lastUpdatedAt
+        # This one will be timestamp based replication based on config option `ts_based_replication`
+        example_mydb_mycollection:
+          replication-method: INCREMENTAL
+          replication-key: lastUpdatedAt
+        # This one will be incremental but will NOT be timestamp based, epochs should go this route
+        example_mydb_myothercollection:
+          replication-method: INCREMENTAL
+          replication-key: lastUpdatedAt
 
   loaders:
     - name: target-jsonl
