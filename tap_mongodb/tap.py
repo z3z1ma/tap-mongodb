@@ -1,6 +1,6 @@
 """MongoDB tap class."""
 import decimal
-from typing import Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import orjson
 import singer.messages
@@ -87,32 +87,6 @@ class CollectionStream(Stream):
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
             yield record
-
-    def _increment_stream_state(
-        self, latest_record: Dict[str, Any], *, context: Optional[dict] = None
-    ) -> None:
-        state_dict = self.get_context_state(context)
-        if latest_record:
-            if self.replication_method in [
-                REPLICATION_INCREMENTAL,
-                REPLICATION_LOG_BASED,
-            ]:
-                if not self.replication_key:
-                    raise ValueError(
-                        f"Could not detect replication key for '{self.name}' stream"
-                        f"(replication method={self.replication_method})"
-                    )
-                treat_as_sorted = self.is_sorted
-                if not treat_as_sorted and self.state_partitioning_keys is not None:
-                    # Streams with custom state partitioning are not resumable.
-                    treat_as_sorted = False
-                increment_state(
-                    state_dict,
-                    replication_key=self.replication_key,
-                    latest_record=latest_record,
-                    is_sorted=treat_as_sorted,
-                    check_sorted=self.check_sorted,
-                )
 
 
 class TapMongoDB(Tap):
