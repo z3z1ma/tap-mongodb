@@ -19,6 +19,7 @@ pipx install git+https://github.com/z3z1ma/tap-mongodb.git
 | prefix              | False    |    ""   | Optionally add a prefix for all streams, useful if ingesting from multiple shards/clusters via independent tap-mongodb configs. |
 | ts_based_replication| False    |    []   | A list of stream names. A stream mentioned here indicates it uses timestamp-based replication. The default for a stream is ❗️ non-timestamp based since Mongo most often uses epochs. This overriding approach is required since the determination of timestamp based replication requires the key exist in the jsonschema with a date-like type which is impossible when there is no explicit schema prior to runtime. NOTE: Streams still require `metadata` mapping with an explicit callout of `replication-key` and `replication-method`. |
 | mongo               | True     | None    | User-defined props. These props are passed directly to pymongo MongoClient allowing the tap user full flexibility not provided in any other Mongo tap. |
+| resilient_replication_key | False    | False    | This setting allows the tap to continue processing if a document is missing the replication key. Useful if a very small percentage of documents are missing the prop. Subsequent executions with a bookmark will ensure they only ingested once. |
 | stream_maps         | False    | None    |             |
 | stream_map_settings | False    | None    |             |
 | stream_map_config   | False    | None    | User-defined config values to be used within map expressions. |

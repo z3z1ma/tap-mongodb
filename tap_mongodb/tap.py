@@ -80,8 +80,11 @@ class CollectionStream(Stream):
                         is_sorted=treat_as_sorted,
                         check_sorted=self.check_sorted,
                     )
-                except:
-                    self.logger.warn("Failed to increment state")
+                except Exception as exc:
+                    if self.config.get("resilient_replication_key", False):
+                        self.logger.warn("Failed to increment state")
+                    else:
+                        self.logger.error("Failed to increment state", exc_info=exc)
 
 
 class TapMongoDB(Tap):
@@ -114,6 +117,15 @@ class TapMongoDB(Tap):
             description="These props are passed directly to pymongo MongoClient allowing the \
                 tap user full flexibility not provided in any other Mongo tap.",
             required=True,
+        ),
+        th.Property(
+            "resilient_replication_key",
+            th.BooleanType,
+            description="This setting allows the tap to continue processing if a document is \
+                missing the replication key. Useful if a very small percentage of documents \
+                are missing the prop. Subsequent executions with a bookmark will ensure they \
+                only ingested once.",
+            default=False,
         ),
         th.Property("stream_maps", th.ObjectType()),
         th.Property("stream_map_settings", th.ObjectType()),
