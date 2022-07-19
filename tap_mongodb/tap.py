@@ -45,7 +45,7 @@ def increment_state(
                 _state.PROGRESS_MARKER_NOTE: "Progress is not resumable if interrupted."
             }
         progress_dict = stream_or_partition_state[_state.PROGRESS_MARKERS]
-    latest_value = latest_record.get("replication_key")
+    latest_value = latest_record.get(replication_key)
     if latest_value is None:
         return
     old_rk_value = _state.to_json_compatible(progress_dict.get("replication_key_value"))
