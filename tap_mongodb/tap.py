@@ -25,7 +25,7 @@ singer.messages.format_message = lambda message: orjson.dumps(
 
 class CollectionStream(Stream):
     primary_keys = ["_id"]
-    schema = {"properties": {"_id": {"type": "string"}}}
+    schema = {"properties": {"_id": {"type": "string"}}, "additionalProperties": True}
 
     @property
     def is_timestamp_replication_key(self) -> bool:
