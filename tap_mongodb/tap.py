@@ -44,7 +44,6 @@ class CollectionStream(Stream):
         for record in self.database[self.collection_name].find(
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
-            self.schema["properties"] = {k: {} for k in record.keys()}
             yield record
 
 
