@@ -8,6 +8,7 @@ from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
+from singer_sdk.helpers import _state
 
 
 def default(obj):
@@ -21,6 +22,47 @@ def default(obj):
 singer.messages.format_message = lambda message: orjson.dumps(
     message.asdict(), default=default, option=orjson.OPT_OMIT_MICROSECONDS
 ).decode("utf-8")
+
+
+def increment_state(
+    stream_or_partition_state: dict,
+    latest_record: dict,
+    replication_key: str,
+    is_sorted: bool,
+    check_sorted: bool,
+) -> None:
+    """:warn: Temporary SDK override
+
+    Update the state using data from the latest record.
+
+    Raises InvalidStreamSortException if is_sorted=True, check_sorted=True and unsorted
+    data is detected in the stream.
+    """
+    progress_dict = stream_or_partition_state
+    if not is_sorted:
+        if _state.PROGRESS_MARKERS not in stream_or_partition_state:
+            stream_or_partition_state[_state.PROGRESS_MARKERS] = {
+                _state.PROGRESS_MARKER_NOTE: "Progress is not resumable if interrupted."
+            }
+        progress_dict = stream_or_partition_state[_state.PROGRESS_MARKERS]
+    latest_value = latest_record.get("replication_key")
+    if latest_value is None:
+        return
+    old_rk_value = _state.to_json_compatible(progress_dict.get("replication_key_value"))
+    new_rk_value = _state.to_json_compatible(latest_value)
+    if old_rk_value is None or not check_sorted or new_rk_value >= old_rk_value:
+        progress_dict["replication_key"] = replication_key
+        progress_dict["replication_key_value"] = new_rk_value
+        return
+
+    if is_sorted:
+        raise _state.InvalidStreamSortException(
+            f"Unsorted data detected in stream. Latest value '{new_rk_value}' is "
+            f"smaller than previous max '{old_rk_value}'."
+        )
+
+
+_state.increment_state = increment_state
 
 
 class CollectionStream(Stream):
@@ -45,6 +87,32 @@ class CollectionStream(Stream):
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
             yield record
+
+    def _increment_stream_state(
+        self, latest_record: Dict[str, Any], *, context: Optional[dict] = None
+    ) -> None:
+        state_dict = self.get_context_state(context)
+        if latest_record:
+            if self.replication_method in [
+                REPLICATION_INCREMENTAL,
+                REPLICATION_LOG_BASED,
+            ]:
+                if not self.replication_key:
+                    raise ValueError(
+                        f"Could not detect replication key for '{self.name}' stream"
+                        f"(replication method={self.replication_method})"
+                    )
+                treat_as_sorted = self.is_sorted
+                if not treat_as_sorted and self.state_partitioning_keys is not None:
+                    # Streams with custom state partitioning are not resumable.
+                    treat_as_sorted = False
+                increment_state(
+                    state_dict,
+                    replication_key=self.replication_key,
+                    latest_record=latest_record,
+                    is_sorted=treat_as_sorted,
+                    check_sorted=self.check_sorted,
+                )
 
 
 class TapMongoDB(Tap):
