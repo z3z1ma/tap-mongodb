@@ -1,18 +1,17 @@
 """MongoDB tap class."""
 import decimal
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Generator, Iterable, List, Optional
 
 import orjson
 import singer.messages
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
+from singer import RecordMessage
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 from singer_sdk.helpers._state import increment_state
-from singer_sdk.streams.core import (
-    REPLICATION_INCREMENTAL,
-    REPLICATION_LOG_BASED,
-)
+from singer_sdk.helpers._util import utc_now
+from singer_sdk.streams.core import REPLICATION_INCREMENTAL, REPLICATION_LOG_BASED
 
 
 def default(obj):
@@ -49,7 +48,24 @@ class CollectionStream(Stream):
         for record in self.database[self.collection_name].find(
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
+            # We have superseded this method with a temporary SDK override
+            # self.schema["properties"] = {k: {} for k in record.keys()}
             yield record
+
+    def _generate_record_messages(
+        self,
+        record: dict,
+    ) -> Generator[RecordMessage, None, None]:
+        for stream_map in self.stream_maps:
+            mapped_record = stream_map.transform(record)
+            if mapped_record is not None:
+                record_message = RecordMessage(
+                    stream=stream_map.stream_alias,
+                    record=mapped_record,
+                    version=None,
+                    time_extracted=utc_now(),
+                )
+                yield record_message
 
     def _increment_stream_state(
         self, latest_record: Dict[str, Any], *, context: Optional[dict] = None
