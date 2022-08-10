@@ -10,6 +10,7 @@ from singer import RecordMessage
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 from singer_sdk.helpers._state import increment_state
+from singer_sdk.helpers._typing import _warn_unmapped_properties
 from singer_sdk.helpers._util import utc_now
 from singer_sdk.streams.core import REPLICATION_INCREMENTAL, REPLICATION_LOG_BASED
 
@@ -25,6 +26,13 @@ def default(obj):
 singer.messages.format_message = lambda message: orjson.dumps(
     message.asdict(), default=default, option=orjson.OPT_OMIT_MICROSECONDS
 ).decode("utf-8")
+
+
+def noop(*args, **kwargs) -> None:
+    pass
+
+
+_warn_unmapped_properties = noop
 
 
 class CollectionStream(Stream):
