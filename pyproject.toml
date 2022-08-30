@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "tap-mongodb"
+name = "tap-mongodb-z"
 version = "0.1.8"
 description = "`tap-mongodb` is a Singer tap for MongoDB, built with the Meltano SDK for Singer Taps."
 authors = ["Alex Butler"]
