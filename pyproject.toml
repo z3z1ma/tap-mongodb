@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tap-mongodb-z"
-version = "0.1.8"
+version = "0.1.9"
 description = "`tap-mongodb` is a Singer tap for MongoDB, built with the Meltano SDK for Singer Taps."
 authors = ["Alex Butler"]
 keywords = [
@@ -37,4 +37,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 # CLI declaration
-tap-mongodb = 'tap_mongodb.tap:TapMongoDB.cli'
+tap-mongodb = 'tap_mongodb_z.tap:TapMongoDB.cli'
