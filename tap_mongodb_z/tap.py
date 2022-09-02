@@ -4,6 +4,7 @@ from typing import Any, Dict, Generator, Iterable, List, Optional
 
 import orjson
 import singer.messages
+from bson.objectid import ObjectId
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
 from singer import RecordMessage
@@ -16,11 +17,13 @@ from singer_sdk.streams.core import REPLICATION_INCREMENTAL, REPLICATION_LOG_BAS
 
 
 def default(obj):
-    if isinstance(obj, decimal.Decimal):
+    if isinstance(obj, (decimal.Decimal, ObjectId)):
         return str(obj)
     elif isinstance(obj, bytes):
         return "****"
     raise TypeError
+
+    # TypeError: Type is not JSON serializable: ObjectId
 
 
 singer.messages.format_message = lambda message: orjson.dumps(
