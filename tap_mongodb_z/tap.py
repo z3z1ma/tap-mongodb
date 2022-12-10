@@ -3,15 +3,15 @@ import decimal
 from typing import Any, Dict, Generator, Iterable, List, Optional
 
 import orjson
-import singer.messages
+import singer_sdk._singerlib as singer
+import singer_sdk._singerlib.messages
+import singer_sdk.helpers._typing
 from bson.objectid import ObjectId
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
-from singer import RecordMessage
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 from singer_sdk.helpers._state import increment_state
-from singer_sdk.helpers._typing import _warn_unmapped_properties
 from singer_sdk.helpers._util import utc_now
 from singer_sdk.streams.core import REPLICATION_INCREMENTAL, REPLICATION_LOG_BASED
 
@@ -23,10 +23,8 @@ def default(obj):
         return "****"
     raise TypeError
 
-    # TypeError: Type is not JSON serializable: ObjectId
 
-
-singer.messages.format_message = lambda message: orjson.dumps(
+singer_sdk._singerlib.messages.format_message = lambda message: orjson.dumps(
     message.asdict(), default=default, option=orjson.OPT_OMIT_MICROSECONDS
 ).decode("utf-8")
 
@@ -35,7 +33,7 @@ def noop(*args, **kwargs) -> None:
     pass
 
 
-_warn_unmapped_properties = noop
+singer_sdk.helpers._typing._warn_unmapped_properties = noop
 
 
 class CollectionStream(Stream):
@@ -66,11 +64,11 @@ class CollectionStream(Stream):
     def _generate_record_messages(
         self,
         record: dict,
-    ) -> Generator[RecordMessage, None, None]:
+    ) -> Generator[singer.RecordMessage, None, None]:
         for stream_map in self.stream_maps:
             mapped_record = stream_map.transform(record)
             if mapped_record is not None:
-                record_message = RecordMessage(
+                record_message = singer.RecordMessage(
                     stream=stream_map.stream_alias,
                     record=mapped_record,
                     version=None,

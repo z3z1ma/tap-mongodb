@@ -3,12 +3,12 @@
 import datetime
 
 from singer_sdk.testing import get_standard_tap_tests
-
 from tap_mongodb_z.tap import TapMongoDB
 
 SAMPLE_CONFIG = {
-    "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-    # TODO: Initialize minimal tap config
+    "mongo": {
+        "host": "mongodb://frank:1234@github.com/test?retryWrites=true&w=majority"
+    },
 }
 
 
@@ -21,3 +21,4 @@ def test_standard_tap_tests():
 
 
 # TODO: Create additional tests as appropriate for your tap.
+test_standard_tap_tests()
