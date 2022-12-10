@@ -25,7 +25,7 @@ def default(obj):
 
 
 singer_sdk._singerlib.messages.format_message = lambda message: orjson.dumps(
-    message.asdict(), default=default, option=orjson.OPT_OMIT_MICROSECONDS
+    message.to_dict(), default=default, option=orjson.OPT_OMIT_MICROSECONDS
 ).decode("utf-8")
 
 
