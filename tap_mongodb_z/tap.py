@@ -1,4 +1,5 @@
 """MongoDB tap class."""
+import datetime
 import decimal
 from typing import Any, Dict, Generator, Iterable, List, Optional
 
@@ -21,6 +22,8 @@ def default(obj):
         return str(obj)
     elif isinstance(obj, bytes):
         return "****"
+    elif isinstance(obj, datetime.datetime):
+        return obj.isoformat()
     raise TypeError
 
 
