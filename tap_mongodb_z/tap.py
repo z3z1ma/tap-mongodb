@@ -60,8 +60,6 @@ class CollectionStream(Stream):
         for record in self.database[self.collection_name].find(
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
-            # We have superseded this method with a temporary SDK override
-            # self.schema["properties"] = {k: {} for k in record.keys()}
             yield record
 
     def _generate_record_messages(
@@ -82,9 +80,6 @@ class CollectionStream(Stream):
     def _increment_stream_state(
         self, latest_record: Dict[str, Any], *, context: Optional[dict] = None
     ) -> None:
-        """:warn: Temporary SDK override
-        Update state of stream or partition with data from the provided record.
-        """
         state_dict = self.get_context_state(context)
         if latest_record:
             if self.replication_method in [
@@ -112,7 +107,7 @@ class CollectionStream(Stream):
                     if self.config.get("resilient_replication_key", False):
                         self.logger.warn("Failed to increment state")
                     else:
-                        self.logger.error("Failed to increment state", exc_info=exc)
+                        raise RuntimeError("Failed to increment state") from exc
 
 
 class TapMongoDB(Tap):
@@ -143,7 +138,7 @@ class TapMongoDB(Tap):
             "mongo",
             th.ObjectType(),
             description="These props are passed directly to pymongo MongoClient allowing the \
-                tap user full flexibility not provided in any other Mongo tap.",
+                tap user full flexibility not provided in any other Mongo tap since every kwarg can be tuned.",
             required=True,
         ),
         th.Property(
@@ -182,7 +177,7 @@ class TapMongoDB(Tap):
                     )
                 )
         if not streams:
-            self.logger.error(
+            raise RuntimeError(
                 "No accessible collections found for supplied Mongo credentials"
             )
         return streams
