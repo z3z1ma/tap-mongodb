@@ -155,7 +155,7 @@ class TapMongoDB(Tap):
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
-        streams = []
+        streams: List[Stream] = []
         client = MongoClient(**self.config["mongo"])
         for db_name in client.list_database_names():
             try:
@@ -168,6 +168,12 @@ class TapMongoDB(Tap):
                 continue
             for collection_name in collections:
                 prefix = self.config.get("prefix", "") + db_name.replace("-", "_")
+                _name = f"{prefix}_{collection_name}" if prefix else collection_name
+                # Skip collections that are not in the catalog if the catalog is provided
+                # SDK plumbing does not handle a purposefully sparse catalog when the
+                # discover_streams() method returns additional streams
+                if self.input_catalog is not None and self.catalog.get_stream(_name) is None:
+                    continue
                 streams.append(
                     CollectionStream(
                         tap=self,
@@ -178,6 +184,9 @@ class TapMongoDB(Tap):
                 )
         if not streams:
             raise RuntimeError(
-                "No accessible collections found for supplied Mongo credentials"
+                "No accessible collections found for supplied Mongo credentials. "
+                "Please check your credentials and try again. If you are using "
+                "a catalog, please ensure that the catalog contains at least one "
+                "collection that the authenticated user has access to."
             )
         return streams
