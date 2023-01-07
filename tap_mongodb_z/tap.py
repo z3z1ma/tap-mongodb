@@ -172,7 +172,7 @@ class TapMongoDB(Tap):
                 # Skip collections that are not in the catalog if the catalog is provided
                 # SDK plumbing does not handle a purposefully sparse catalog when the
                 # discover_streams() method returns additional streams
-                if self.input_catalog is not None and self.catalog.get_stream(_name) is None:
+                if self.input_catalog is not None and self.input_catalog.get_stream(_name) is None:
                     continue
                 streams.append(
                     CollectionStream(
