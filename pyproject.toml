@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "z3-tap-mongodb"
-version = "0.1.20"
+version = "0.2.0"
 description = "z3-tap-mongodb is a Singer tap for MongoDB, built with the Meltano SDK for Singer Taps."
 authors = ["Alex Butler <butler.alex2010@gmail.com>"]
 keywords = ["ELT", "MongoDB"]
