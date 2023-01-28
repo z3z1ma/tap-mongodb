@@ -9,11 +9,11 @@
 
 `tap-mongodb` is a Singer tap for MongoDB.
 
-This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap aspires to have two replication modes. Mode 1 (implemented) merely outputs data with an `additonalProperties: true` schema. Mode 2 (pending) will buffer records and infer the schema before emitting. 
+This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap has two replication modes. 
 
-Mode 1 is ideal for unstructured targets such as JSONL, blob storage, or VARIANT/JSON type columns. At worst, it can be loaded into a string column. 
+- Mode 1 merely outputs data with an `additonalProperties: true` schema. This is ideal for loading to unstructured sources such as blob storage or VARIANT/JSON columns. At worst, it can be loaded into a string column.
 
-Mode 2 will permit the tap to work with strongly typed sources. Ideally these sources are able to handle schema evolution. Given that, I expect this to be an attractive option as well. Particularly when we don't expect the documents to vary dramatically.
+- Mode 2 infer the schema from a configurable sample size of records. This allows the tap to work with strongly typed destinations. Under the hood we leverage genson. This is an attractive option. Particularly when we don't expect the documents to vary dramatically.
 
 Lastly, I hope that this tap exemplifies how we can use as little code as possible with the existing plumbing in the SDK.
 
@@ -29,6 +29,10 @@ pipx install z3-tap-mongodb
 # Verify it is installed
 tap-mongodb --version
 ```
+
+## Incremental Syncs
+
+We support incremental syncs on a collection by collection basis. All this requires is the developer adding a `replication_key` to the catalog for a stream. After dumping the `tap-mongodb --config ... --discover > catalog.json`, you can modify the catalog and version control it for ongoing use. If using meltano, you can use the `metadata` key to update the catalog dynamically achieving the same affect. One caveat of our incrementality is that this relies on an alphanumerically sortable replication key. This accounts for a majority of use cases but there are some edge cases. Integer based replication keys (such as epochs) work fine obviously, ISO formatted dates work fine, but any other format may not work as expected.
 
 ## Settings
 

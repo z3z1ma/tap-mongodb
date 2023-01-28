@@ -9,6 +9,8 @@ import genson
 import singer_sdk._singerlib as singer
 from pymongo.collection import Collection
 from bson.json_util import dumps
+from bson.objectid import ObjectId
+from bson.timestamp import Timestamp
 from singer_sdk import Stream
 from singer_sdk.helpers._state import increment_state
 from singer_sdk.helpers._util import utc_now
@@ -24,6 +26,11 @@ class CollectionStream(Stream):
 
     primary_keys = ["_id"]
     schema = {"properties": {"_id": {"type": "string"}}, "additionalProperties": True}
+    # One caveat is this relies on an alphanumerically sortable replication key
+    # so this accounts for a majority of use cases but there are some edge cases.
+    # Integer based replication keys work fine, ISO formatted dates work fine, but
+    # any other format may not work as expected.
+    is_timestamp_replication_key = False
 
     def __init__(
         self,
@@ -49,6 +56,33 @@ class CollectionStream(Stream):
         super().__init__(tap, schema=schema, name=name)
         self._collection = collection
 
+    def _make_resume_token(oplog_doc: dict):
+        """Make a resume token the hard way for Mongo <=3.6
+
+        The idea here is to use change streams but there are nuances that don't fit a batch use
+        case such as the fact it is a capped collection."""
+        rt = b"\x82"
+        rt += oplog_doc["ts"].time.to_bytes(4, byteorder="big") + oplog_doc["ts"].inc.to_bytes(
+            4, byteorder="big"
+        )
+        rt += b"\x46\x64\x5f\x69\x64\x00\x64"
+        rt += bytes.fromhex(str(oplog_doc["o"]["_id"]))
+        rt += b"\x00\x5a\x10\x04"
+        rt += oplog_doc["ui"].bytes
+        rt += b"\x04"
+
+        return {"_data": rt}
+
+    def _make_start_op_time(self):
+        """Make a Timestamp used to resume a change stream for Mongo >3.6
+
+        The idea here is to use change streams but there are nuances that don't fit a batch use
+        case such as the fact it is a capped collection."""
+        first_record: ObjectId = list(self._collection.find(projection=[]).sort("_id", 1).limit(1))[
+            0
+        ]["_id"]
+        return Timestamp(first_record.generation_time, first_record._inc)
+
     def get_records(self, context: dict | None) -> Iterable[dict]:
         bookmark = self.get_starting_replication_key_value(context)
         yield from self._collection.find(
@@ -73,6 +107,9 @@ class CollectionStream(Stream):
     def _increment_stream_state(
         self, latest_record: dict[str, Any], *, context: dict | None = None
     ) -> None:
+        """This override adds error handling for replication key incrementing.
+
+        This is useful since a single bad document could otherwise break the stream."""
         state_dict = self.get_context_state(context)
         if latest_record:
             if self.replication_method in [REPLICATION_INCREMENTAL, REPLICATION_LOG_BASED]:
