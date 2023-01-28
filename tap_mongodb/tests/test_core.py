@@ -6,9 +6,7 @@ from singer_sdk.testing import get_standard_tap_tests
 from tap_mongodb_z.tap import TapMongoDB
 
 SAMPLE_CONFIG = {
-    "mongo": {
-        "host": "mongodb://frank:1234@github.com/test?retryWrites=true&w=majority"
-    },
+    "mongo": {"host": "mongodb://frank:1234@github.com/test?retryWrites=true&w=majority"},
 }
 
 

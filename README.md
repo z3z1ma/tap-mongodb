@@ -1,13 +1,33 @@
-# tap-mongodb
+<h1 align="center">Tap-Mongodb</h1>
+
+<p align="center">
+<a href="https://github.com/z3z1ma/tap-mongodb/actions/"><img alt="Actions Status" src="https://github.com/z3z1ma/tap-mongodb/actions/workflows/ci_workflow.yml/badge.svg"></a>
+<a href="https://github.com/z3z1ma/tap-mongodb/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+<a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+</p>
+
 
 `tap-mongodb` is a Singer tap for MongoDB.
+
+This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap aspires to have two replication modes. Mode 1 (implemented) merely outputs data with an `additonalProperties: true` schema. Mode 2 (pending) will buffer records and infer the schema before emitting. 
+
+Mode 1 is ideal for unstructured targets such as JSONL, blob storage, or VARIANT/JSON type columns. At worst, it can be loaded into a string column. 
+
+Mode 2 will permit the tap to work with strongly typed sources. Ideally these sources are able to handle schema evolution. Given that, I expect this to be an attractive option as well. Particularly when we don't expect the documents to vary dramatically.
+
+Lastly, I hope that this tap exemplifies how we can use as little code as possible with the existing plumbing in the SDK.
 
 Built with the [Meltano Tap SDK](https://sdk.meltano.com) for Singer Taps.
 
 ## Installation
 
+The package on pypi is named `z3-tap-mongodb` but the executable it ships with is simply `tap-mongodb`. This allows me to release work without concerns of naming conflicts on the package index.
+
 ```bash
-pipx install git+https://github.com/z3z1ma/tap-mongodb.git
+# Use pipx or pip
+pipx install z3-tap-mongodb
+# Verify it is installed
+tap-mongodb --version
 ```
 
 ## Configuration

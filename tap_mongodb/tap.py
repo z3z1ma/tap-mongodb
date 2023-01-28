@@ -118,36 +118,46 @@ class TapMongoDB(Tap):
         th.Property(
             "prefix",
             th.StringType,
-            description="Optionally add a prefix for all streams, useful if ingesting \
-                from multiple shards/clusters via independent tap-mongodb configs.",
+            description=(
+                "Optionally add a prefix for all streams, useful if ingesting                 from"
+                " multiple shards/clusters via independent tap-mongodb configs."
+            ),
             default="",
         ),
         th.Property(
             "ts_based_replication",
             th.ArrayType(th.StringType),
-            description="Each item should correspond to a stream name. A stream mentioned here \
-                indicates it uses timestamp-based replication. The default for a stream is \
-                non-timestamp based since Mongo most often uses epochs. This is required since \
-                the determination of timestamp based replication requires the key exist in the \
-                jsonschema with a date-like type which is impossible when there is no explicit \
-                schema prior to runtime. NOTE: Streams still require `metadata` mapping with an \
-                explicit callout of `replication-key` and `replication-method`.",
+            description=(
+                "Each item should correspond to a stream name. A stream mentioned here             "
+                "    indicates it uses timestamp-based replication. The default for a stream is    "
+                "             non-timestamp based since Mongo most often uses epochs. This is"
+                " required since                 the determination of timestamp based replication"
+                " requires the key exist in the                 jsonschema with a date-like type"
+                " which is impossible when there is no explicit                 schema prior to"
+                " runtime. NOTE: Streams still require `metadata` mapping with an                "
+                " explicit callout of `replication-key` and `replication-method`."
+            ),
             default=[],
         ),
         th.Property(
             "mongo",
             th.ObjectType(),
-            description="These props are passed directly to pymongo MongoClient allowing the \
-                tap user full flexibility not provided in any other Mongo tap since every kwarg can be tuned.",
+            description=(
+                "These props are passed directly to pymongo MongoClient allowing the               "
+                "  tap user full flexibility not provided in any other Mongo tap since every kwarg"
+                " can be tuned."
+            ),
             required=True,
         ),
         th.Property(
             "resilient_replication_key",
             th.BooleanType,
-            description="This setting allows the tap to continue processing if a document is \
-                missing the replication key. Useful if a very small percentage of documents \
-                are missing the prop. Subsequent executions with a bookmark will ensure they \
-                only ingested once.",
+            description=(
+                "This setting allows the tap to continue processing if a document is               "
+                "  missing the replication key. Useful if a very small percentage of documents     "
+                "            are missing the prop. Subsequent executions with a bookmark will"
+                " ensure they                 only ingested once."
+            ),
             default=False,
         ),
         th.Property("stream_maps", th.ObjectType()),
