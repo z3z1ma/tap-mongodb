@@ -26,7 +26,6 @@ jobs:
           version: 1.2.2
       - name: Install dependencies
         run: |
-          poetry shell
           poetry run pip install --upgrade setuptools wheel && poetry install
       - name: Test with pytest
         run: |
