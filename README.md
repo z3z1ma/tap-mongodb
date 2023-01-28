@@ -30,28 +30,24 @@ pipx install z3-tap-mongodb
 tap-mongodb --version
 ```
 
-## Configuration
+## Settings
 
-### Accepted Config Options
+| Setting                 | Required | Default | Description |
+|:------------------------|:--------:|:-------:|:------------|
+| mongo                   | True     | None    | These props are passed directly to pymongo MongoClient allowing the tap user full flexibility not provided in any other Mongo tap since every kwarg can be tuned. |
+| stream_prefix           | False    |         | Optionally add a prefix for all streams, useful if ingesting from multiple shards/clusters via independent tap-mongodb configs. |
+| optional_replication_key| False    |       0 | This setting allows the tap to continue processing if a document is missing the replication key. Useful if a very small percentage of documents are missing the property. |
+| database_includes       | False    | None    | A list of databases to include. If this list is empty, all databases will be included. |
+| database_excludes       | False    | None    | A list of databases to exclude. If this list is empty, no databases will be excluded. |
+| infer_schema            | False    |       0 | If true, the tap will infer the schema from documents sampled from the collection. |
+| infer_schema_max_docs   | False    |    2000 | The maximum number of documents to sample when inferring the schema. This is only used when infer_schema is true. |
+| stream_maps             | False    | None    |             |
+| stream_map_settings     | False    | None    |             |
+| stream_map_config       | False    | None    | User-defined config values to be used within map expressions. |
+| flattening_enabled      | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
+| flattening_max_depth    | False    | None    | The max depth to flatten schemas. |
 
-| Setting             | Required | Default | Description |
-|:--------------------|:--------:|:-------:|:------------|
-| prefix              | False    |    ""   | Optionally add a prefix for all streams, useful if ingesting from multiple shards/clusters via independent tap-mongodb configs. |
-| ts_based_replication| False    |    []   | A list of stream names. A stream mentioned here indicates it uses timestamp-based replication. The default for a stream is ❗️ non-timestamp based since Mongo most often uses epochs. This overriding approach is required since the determination of timestamp based replication requires the key exist in the jsonschema with a date-like type which is impossible when there is no explicit schema prior to runtime. NOTE: Streams still require `metadata` mapping with an explicit callout of `replication-key` and `replication-method`. |
-| mongo               | True     | None    | User-defined props. These props are passed directly to pymongo MongoClient allowing the tap user full flexibility not provided in any other Mongo tap. |
-| resilient_replication_key | False    | False    | This setting allows the tap to continue processing if a document is missing the replication key. Useful if a very small percentage of documents are missing the prop. Subsequent executions with a bookmark will ensure they only ingested once. |
-| stream_maps         | False    | None    |             |
-| stream_map_settings | False    | None    |             |
-| stream_map_config   | False    | None    | User-defined config values to be used within map expressions. |
-| flattening_enabled  | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
-| flattening_max_depth| False    | None    | The max depth to flatten schemas. |
-
-A full list of supported settings and capabilities for this
-tap is available by running:
-
-```bash
-tap-mongodb --about
-```
+A full list of supported settings and capabilities is available by running: `tap-mongodb --about`
 
 ### Configure using environment variables
 

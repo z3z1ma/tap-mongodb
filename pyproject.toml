@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "z3-tap-mongodb"
-version = "0.2.0"
+version = "0.3.0"
 description = "z3-tap-mongodb is a Singer tap for MongoDB, built with the Meltano SDK for Singer Taps."
 authors = ["Alex Butler <butler.alex2010@gmail.com>"]
 keywords = ["ELT", "MongoDB"]
@@ -29,6 +29,7 @@ requests = ">=2.25.1"
 singer-sdk = ">=0.17.0"
 pymongo = { version = ">=4.3.3", extras = ["srv"] }
 orjson = ">=3.8.2"
+genson = "^1.2.2"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=6.2.5"
@@ -57,4 +58,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 # CLI declaration
-tap-mongodb = 'tap_mongodb_z.tap:TapMongoDB.cli'
+tap-mongodb = 'tap_mongodb.tap:TapMongoDB.cli'

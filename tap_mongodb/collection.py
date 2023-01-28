@@ -1,11 +1,14 @@
 """MongoDB tap class."""
 from __future__ import annotations
 
+import json
 import os
 from typing import Any, Generator, Iterable
 
+import genson
 import singer_sdk._singerlib as singer
 from pymongo.collection import Collection
+from bson.json_util import dumps
 from singer_sdk import Stream
 from singer_sdk.helpers._state import increment_state
 from singer_sdk.helpers._util import utc_now
@@ -31,8 +34,19 @@ class CollectionStream(Stream):
         collection: Collection,
     ) -> None:
         """Initialize the stream."""
-        _ = schema  # TODO: Infer schema from collection
-        super().__init__(tap, name=name)
+        if tap.config.get("infer_schema", False) and not schema:
+            # Infer the schema from the first 2,000 records (or the max_schema_inference)
+            tap.logger.info("Inferring schema for collection '%s'", collection.name)
+            builder = genson.SchemaBuilder(schema_uri=None)
+            for record in collection.aggregate(
+                [{"$sample": {"size": tap.config.get("infer_schema_max_docs", 2_000)}}]
+            ):
+                builder.add_object(json.loads(dumps(record)))
+            schema = builder.to_schema()
+            schema.pop("required", None)
+            tap.logger.info("Inferred schema: %s", schema)
+            # End of schema inference
+        super().__init__(tap, schema=schema, name=name)
         self._collection = collection
 
     def get_records(self, context: dict | None) -> Iterable[dict]:
@@ -83,9 +97,11 @@ class CollectionStream(Stream):
                     # Handle the case where the replication key is not in the latest record
                     # since this is a valid case for Mongo
                     if self.config.get("optional_replication_key", False):
-                        self.logger.warn("Failed to increment state")
-                    else:
-                        raise RuntimeError("Failed to increment state") from e
+                        self.logger.warn("Failed to increment state. Ignoring...")
+                        return
+                    raise RuntimeError(
+                        "Failed to increment state. Got record %s", latest_record
+                    ) from e
 
 
 class MockCollection:
