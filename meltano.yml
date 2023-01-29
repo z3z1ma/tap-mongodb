@@ -10,39 +10,51 @@ plugins:
       namespace: "tap_mongodb"
       pip_url: -e .
       capabilities:
+        - batch
         - state
         - catalog
         - discover
         - about
         - stream-maps
+        - test
       settings:
-        - name: prefix
+        - name: stream_prefix
           description:
             Optionally add a prefix for all streams, useful if ingesting
             from multiple shards/clusters via independent tap-mongodb configs.
           value: ""
-        - name: ts_based_replication
+        - name: optional_replication_key
           description: |
-            Each item should correspond to a stream name. A stream mentioned here 
-            indicates it uses timestamp-based replication. The default for a stream is 
-            non-timestamp based since Mongo most often uses epochs. This is required since 
-            the determination of timestamp based replication requires the key exist in the 
-            jsonschema with a date-like type which is impossible when there is no explicit 
-            schema prior to runtime. NOTE: Streams still require `metadata` mapping with an 
-            explicit callout of `replication-key` and `replication-method`.
+            Make the replication key optional. If set to true, the tap will
+            not fail if the replication key is not found in a document.
+          value: False
+        - name: database_includes
+          description: |
+            A list of databases to include. If this is set,
+            only the databases in this list will be replicated.
           value: []
+        - name: database_excludes
+          description: |
+            A list of databases to exclude. If this is set,
+            all databases except those in this list will be replicated.
+          value: []
+        - name: infer_schema
+          description: |
+            If set to true, the tap will infer the schema from a sample of the
+            documents in each collection. If set to false, the tap will
+            use a default schema for each collection.
+          value: False
+        - name: infer_schema_max_docs
+          description: |
+            The maximum number of documents to use when inferring the schema.
+          value: 2000
         - name: mongo
           description:
             These props are passed directly to pymongo MongoClient allowing the
             tap user full flexibility not provided in any other Mongo tap.
       config:
         # All streams will be prefixed with `example_`
-        prefix: example_
-        # The stream mentioned in this list indicates that the
-        # metadata replication-key is expected to be timestamp
-        # based overriding the default of non-timestamp based
-        ts_based_replication:
-          - example_mydb_mycollection
+        stream_prefix: example_
         # These are all passed directly through to pymongo MongoClient, ie:
         mongo:
           host: localhost
@@ -57,15 +69,12 @@ plugins:
       select:
         - "*.*"
       metadata:
-        # This one will be timestamp based replication based on config option `ts_based_replication`
+        # Example of how to set a replication key for a collection
+        # <stream_prefix><db_name>_<collection_name>
         example_mydb_mycollection:
-          replication-method: INCREMENTAL
           replication-key: lastUpdatedAt
-        # This one will be incremental but will NOT be timestamp based, epochs should go this route
         example_mydb_myothercollection:
-          replication-method: INCREMENTAL
           replication-key: lastUpdatedAt
-
   loaders:
     - name: target-jsonl
       variant: andyh1203

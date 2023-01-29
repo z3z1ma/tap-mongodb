@@ -6,18 +6,15 @@
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
-
 `tap-mongodb` is a Singer tap for MongoDB.
 
-This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap has two replication modes. 
+This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap has two replication modes configurable via `infer_schema: true/false`. 
 
-- Mode 1 merely outputs data with an `additonalProperties: true` schema. This is ideal for loading to unstructured sources such as blob storage or VARIANT/JSON columns. At worst, it can be loaded into a string column.
+- **Strategy 1** (`infer_schema: false`) merely outputs data with an `additonalProperties: true` schema. This is ideal for loading to unstructured sources such as blob storage or VARIANT/JSON columns. At worst, it can be loaded into a string column.
 
-- Mode 2 infer the schema from a configurable sample size of records. This allows the tap to work with strongly typed destinations. Under the hood we leverage genson. This is an attractive option. Particularly when we don't expect the documents to vary dramatically.
+- **Strategy 2** (`infer_schema: true`) infers the schema of each collection from a configurable sample size of records. This allows the tap to work with strongly typed destinations. This is an attractive option. Particularly when we don't expect the documents to vary dramatically.
 
-Lastly, I hope that this tap exemplifies how we can use as little code as possible with the existing plumbing in the SDK.
-
-Built with the [Meltano Tap SDK](https://sdk.meltano.com) for Singer Taps.
+The last differentiator is the minimal code footprint in comparison to existing Mongo taps. I hope that this tap exemplifies how we can use as little code as possible with the existing plumbing in the SDK. The SDK means the tap supports the `BATCH` specification out of the box and is able to receive ongoing updates and improvements as the SDK continues to mature.
 
 ## Installation
 
@@ -43,8 +40,9 @@ We support incremental syncs on a collection by collection basis. All this requi
 | optional_replication_key| False    |       0 | This setting allows the tap to continue processing if a document is missing the replication key. Useful if a very small percentage of documents are missing the property. |
 | database_includes       | False    | None    | A list of databases to include. If this list is empty, all databases will be included. |
 | database_excludes       | False    | None    | A list of databases to exclude. If this list is empty, no databases will be excluded. |
-| infer_schema            | False    |       0 | If true, the tap will infer the schema from documents sampled from the collection. |
+| infer_schema            | False    |   False | If true, the tap will infer the schema from documents sampled from the collection. |
 | infer_schema_max_docs   | False    |    2000 | The maximum number of documents to sample when inferring the schema. This is only used when infer_schema is true. |
+| batch_config            | False    | None    | Batch configuration as defined [here](https://sdk.meltano.com/en/latest/batch.html#batch-configuration) |
 | stream_maps             | False    | None    |             |
 | stream_map_settings     | False    | None    |             |
 | stream_map_config       | False    | None    | User-defined config values to be used within map expressions. |
@@ -61,6 +59,7 @@ environment variable is set either in the terminal context or in the `.env` file
 
 ### Capabilities
 
+* `batch`
 * `catalog`
 * `state`
 * `discover`
@@ -135,3 +134,5 @@ meltano elt tap-mongodb target-jsonl
 
 See the [dev guide](https://sdk.meltano.com/en/latest/dev_guide.html) for more instructions on how to use the SDK to
 develop your own taps and targets.
+
+Built with the [Meltano Tap SDK](https://sdk.meltano.com) for Singer Taps.
