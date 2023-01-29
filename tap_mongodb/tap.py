@@ -98,6 +98,7 @@ class TapMongoDB(Tap):
             ),
             default=2_000,
         ),
+        th.Property("batch_config", th.ObjectType()),
         th.Property("stream_maps", th.ObjectType()),
         th.Property("stream_map_settings", th.ObjectType()),
     ).to_dict()
