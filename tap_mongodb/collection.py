@@ -1,21 +1,68 @@
 """MongoDB tap class."""
 from __future__ import annotations
 
+import collections
 import json
 import os
-from typing import Any, Generator, Iterable
+from typing import Any, Generator, Iterable, MutableMapping
 
 import genson
+import orjson
 import singer_sdk._singerlib as singer
-from pymongo.collection import Collection
-from bson.json_util import dumps
+import singer_sdk.helpers._flattening
+from bson.json_util import default, dumps
 from bson.objectid import ObjectId
 from bson.timestamp import Timestamp
+from pymongo.collection import Collection
 from singer_sdk import Stream
 from singer_sdk.helpers._state import increment_state
 from singer_sdk.helpers._util import utc_now
 from singer_sdk.plugin_base import PluginBase as TapBaseClass
 from singer_sdk.streams.core import REPLICATION_INCREMENTAL, REPLICATION_LOG_BASED
+
+
+def _flatten_record(
+    record_node: MutableMapping[Any, Any],
+    flattened_schema: dict | None = None,
+    parent_key: list[str] | None = None,
+    separator: str = "__",
+    level: int = 0,
+    max_level: int = 0,
+) -> dict:
+    if parent_key is None:
+        parent_key = []
+    items: list[tuple[str, Any]] = []
+    for k, v in record_node.items():
+        new_key = singer_sdk.helpers._flattening.flatten_key(k, parent_key, separator)
+        if isinstance(v, collections.abc.MutableMapping) and level < max_level:
+            items.extend(
+                _flatten_record(
+                    v,
+                    flattened_schema,
+                    parent_key + [k],
+                    separator=separator,
+                    level=level + 1,
+                    max_level=max_level,
+                ).items()
+            )
+        else:
+            items.append(
+                (
+                    new_key,
+                    # Override the default json encoder to use orjson
+                    # and the bson json_util default
+                    orjson.dumps(v, default=default, option=orjson.OPT_OMIT_MICROSECONDS).decode(
+                        "utf-8"
+                    )
+                    if singer_sdk.helpers._flattening._should_jsondump_value(k, v, flattened_schema)
+                    else v,
+                )
+            )
+    return dict(items)
+
+
+# Monkey patch the singer lib to use orjson + bson json_util default
+singer_sdk.helpers._flattening._flatten_record = _flatten_record
 
 
 class CollectionStream(Stream):
