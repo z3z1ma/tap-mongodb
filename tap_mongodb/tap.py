@@ -33,6 +33,15 @@ def noop(*args, **kwargs) -> None:
 singer_sdk.helpers._typing._warn_unmapped_properties = noop
 
 
+def recursively_drop_required(schema):
+    """Recursively drop the required property from a schema."""
+    schema.pop("required", None)
+    if "properties" in schema:
+        for prop in schema["properties"]:
+            if schema["properties"][prop].get("type") == "object":
+                recursively_drop_required(schema["properties"][prop])
+
+
 class TapMongoDB(Tap):
     """MongoDB tap class."""
 
@@ -171,11 +180,9 @@ class TapMongoDB(Tap):
                 stream_prefix += db_name.replace("-", "_").replace(".", "_")
                 stream_name = f"{stream_prefix}_{collection}"
                 entry = CatalogEntry.from_dict({"tap_stream_id": stream_name})
+                entry.stream = stream_name
                 strategy: str | None = self.config.get("strategy")
                 if strategy == "infer":
-                    self.logger.info(
-                        "Inferring schema for collection '%s'", client[db_name][collection].name
-                    )
                     builder = genson.SchemaBuilder(schema_uri=None)
                     for record in client[db_name][collection].aggregate(
                         [{"$sample": {"size": self.config.get("infer_schema_max_docs", 2_000)}}]
@@ -190,7 +197,11 @@ class TapMongoDB(Tap):
                             )
                         )
                     schema = builder.to_schema()
-                    schema.pop("required", None)
+                    recursively_drop_required(schema)
+                    if not schema:
+                        # If the schema is empty, skip the stream
+                        # this errs on the side of strictness
+                        continue
                     self.logger.info("Inferred schema: %s", schema)
                 elif strategy == "envelope":
                     schema = {
@@ -222,9 +233,7 @@ class TapMongoDB(Tap):
                 else:
                     raise RuntimeError(f"Unknown strategy {strategy}")
                 entry.schema = entry.schema.from_dict(schema)
-                entry.metadata.get_standard_metadata(
-                    schema=schema, key_properties=["_id"], replication_method="FULL_TABLE"
-                )
+                entry.metadata.get_standard_metadata(schema=schema, key_properties=["_id"])
                 entry.database = db_name
                 entry.table = collection
                 catalog.add_stream(entry)
@@ -248,15 +257,15 @@ class TapMongoDB(Tap):
         db_includes = self.config.get("database_includes", [])
         db_excludes = self.config.get("database_excludes", [])
         for entry in self.catalog_dict["streams"]:
-            if entry["database"] in db_excludes:
+            if entry["database_name"] in db_excludes:
                 continue
-            if db_includes and entry["database"] not in db_includes:
+            if db_includes and entry["database_name"] not in db_includes:
                 continue
             stream = CollectionStream(
                 tap=self,
-                name=entry["stream"],
+                name=entry.get("stream", entry["tap_stream_id"]),
                 schema=entry["schema"],
-                collection=client[entry["database"]][entry["table"]],
+                collection=client[entry["database_name"]][entry["table_name"]],
             )
             stream.apply_catalog(Catalog.from_dict(entry))
             yield stream
