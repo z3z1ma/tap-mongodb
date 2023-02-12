@@ -36,15 +36,14 @@ We support incremental syncs on a collection by collection basis. All this requi
 | Setting                 | Required | Default | Description |
 |:------------------------|:--------:|:-------:|:------------|
 | mongo                   | True     | None    | These props are passed directly to pymongo MongoClient allowing the tap user full flexibility not provided in any other Mongo tap since every kwarg can be tuned. |
-| stream_prefix           | False    |         | Optionally add a prefix for all streams, useful if ingesting from multiple shards/clusters via independent tap-mongodb configs. |
+| stream_prefix           | False    |         | Optionally add a prefix for all streams, useful if ingesting from multiple shards/clusters via independent tap-mongodb configs. This is applied during catalog generation. Regenerate the catalog to apply a new stream prefix. |
 | optional_replication_key| False    |       0 | This setting allows the tap to continue processing if a document is missing the replication key. Useful if a very small percentage of documents are missing the property. |
 | database_includes       | False    | None    | A list of databases to include. If this list is empty, all databases will be included. |
 | database_excludes       | False    | None    | A list of databases to exclude. If this list is empty, no databases will be excluded. |
-| infer_schema            | False    |   False | If true, the tap will infer the schema from documents sampled from the collection. |
-| infer_schema_max_docs   | False    |    2000 | The maximum number of documents to sample when inferring the schema. This is only used when infer_schema is true. |
+| strategy                | False    |   "raw" | The strategy to use for schema resolution. Defaults to 'raw'. The 'raw' strategy uses a relaxed schema using additionalProperties: true to accept the document as-is leaving the target to respect it. Useful for blob or jsonl. The 'envelope' strategy will envelope the document under a key named `document`. The target should use a variant type for this key. The 'infer' strategy will infer the schema from the data based on a configurable number of documents. |
+| infer_schema_max_docs   | False    |    2000 | The maximum number of documents to sample when inferring the schema. This is only used when `strategy` is set to `infer`. |
 | batch_config            | False    | None    | Batch configuration as defined [here](https://sdk.meltano.com/en/latest/batch.html#batch-configuration) |
 | stream_maps             | False    | None    |             |
-| stream_map_settings     | False    | None    |             |
 | stream_map_config       | False    | None    | User-defined config values to be used within map expressions. |
 | flattening_enabled      | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
 | flattening_max_depth    | False    | None    | The max depth to flatten schemas. |

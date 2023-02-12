@@ -2,15 +2,12 @@
 from __future__ import annotations
 
 import collections
-import json
 import os
 from typing import Any, Generator, Iterable, MutableMapping
 
-import genson
 import orjson
 import singer_sdk._singerlib as singer
 import singer_sdk.helpers._flattening
-from bson.json_util import default, dumps
 from bson.objectid import ObjectId
 from bson.timestamp import Timestamp
 from pymongo.collection import Collection
@@ -18,7 +15,11 @@ from singer_sdk import Stream
 from singer_sdk.helpers._state import increment_state
 from singer_sdk.helpers._util import utc_now
 from singer_sdk.plugin_base import PluginBase as TapBaseClass
-from singer_sdk.streams.core import REPLICATION_INCREMENTAL, REPLICATION_LOG_BASED
+from singer_sdk.streams.core import (
+    REPLICATION_INCREMENTAL,
+    REPLICATION_LOG_BASED,
+    TypeConformanceLevel,
+)
 
 
 def _flatten_record(
@@ -50,10 +51,10 @@ def _flatten_record(
                 (
                     new_key,
                     # Override the default json encoder to use orjson
-                    # and the bson json_util default
-                    orjson.dumps(v, default=default, option=orjson.OPT_OMIT_MICROSECONDS).decode(
-                        "utf-8"
-                    )
+                    # and a string encoder for ObjectIds, etc.
+                    orjson.dumps(
+                        v, default=lambda o: str(o), option=orjson.OPT_OMIT_MICROSECONDS
+                    ).decode("utf-8")
                     if singer_sdk.helpers._flattening._should_jsondump_value(k, v, flattened_schema)
                     else v,
                 )
@@ -71,13 +72,16 @@ class CollectionStream(Stream):
     This stream is used to represent a collection in a database. It is a generic
     stream that can be used to represent any collection in a database."""
 
+    # The output stream will always have _id as the primary key
     primary_keys = ["_id"]
-    schema = {"properties": {"_id": {"type": "string"}}, "additionalProperties": True}
-    # One caveat is this relies on an alphanumerically sortable replication key
-    # so this accounts for a majority of use cases but there are some edge cases.
-    # Integer based replication keys work fine, ISO formatted dates work fine, but
-    # any other format may not work as expected.
+
+    # Disable timestamp replication keys. One caveat is this relies on an
+    # alphanumerically sortable replication key. Python __gt__ and __lt__ are
+    # used to compare the replication key values. This works for most cases.
     is_timestamp_replication_key = False
+
+    # No conformance level is set by default since this is a generic stream
+    TYPE_CONFORMANCE_LEVEL = TypeConformanceLevel.NONE
 
     def __init__(
         self,
@@ -88,20 +92,9 @@ class CollectionStream(Stream):
         collection: Collection,
     ) -> None:
         """Initialize the stream."""
-        if tap.config.get("infer_schema", False) and not schema:
-            # Infer the schema from the first 2,000 records (or the max_schema_inference)
-            tap.logger.info("Inferring schema for collection '%s'", collection.name)
-            builder = genson.SchemaBuilder(schema_uri=None)
-            for record in collection.aggregate(
-                [{"$sample": {"size": tap.config.get("infer_schema_max_docs", 2_000)}}]
-            ):
-                builder.add_object(json.loads(dumps(record)))
-            schema = builder.to_schema()
-            schema.pop("required", None)
-            tap.logger.info("Inferred schema: %s", schema)
-            # End of schema inference
-        super().__init__(tap, schema=schema, name=name)
+        super().__init__(tap=tap, schema=schema, name=name)
         self._collection = collection
+        self._strategy = self.config.get("strategy", "raw")
 
     def _make_resume_token(oplog_doc: dict):
         """Make a resume token the hard way for Mongo <=3.6
@@ -132,9 +125,15 @@ class CollectionStream(Stream):
 
     def get_records(self, context: dict | None) -> Iterable[dict]:
         bookmark = self.get_starting_replication_key_value(context)
-        yield from self._collection.find(
+        for record in self._collection.find(
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
-        )
+        ):
+            if self._strategy == "envelope":
+                # Return the record wrapped in a document key
+                yield {"_id": record["_id"], "document": record}
+            else:
+                # Return the record as is
+                yield record
 
     def _generate_record_messages(
         self,
