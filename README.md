@@ -8,7 +8,7 @@
 
 `tap-mongodb` is a Singer tap for MongoDB.
 
-This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap has three replication modes configurable via `strategy: raw | envelope | infer`. 
+This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap has three output modes configurable via `strategy: raw | envelope | infer`. 
 
 - **Strategy 1** (`strategy: raw`) merely outputs data as-is with an `additonalProperties: true` schema. This is ideal for loading to unstructured sources such as blob storage where it may be preferable to keep documents exactly as they are. 
 
