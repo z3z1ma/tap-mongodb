@@ -179,6 +179,7 @@ class TapMongoDB(Tap):
                         db_name,
                     )
                     continue
+                self.logger.info("Discovered collection %s.%s", db_name, collection)
                 stream_prefix = self.config.get("stream_prefix", BLANK)
                 stream_prefix += db_name.replace("-", "_").replace(".", "_")
                 stream_name = f"{stream_prefix}_{collection}"
@@ -236,7 +237,9 @@ class TapMongoDB(Tap):
                 else:
                     raise RuntimeError(f"Unknown strategy {strategy}")
                 entry.schema = entry.schema.from_dict(schema)
-                entry.metadata.get_standard_metadata(schema=schema, key_properties=["_id"])
+                entry.metadata = entry.metadata.get_standard_metadata(
+                    schema=schema, key_properties=["_id"]
+                )
                 entry.database = db_name
                 entry.table = collection
                 catalog.add_stream(entry)
