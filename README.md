@@ -10,9 +10,11 @@
 
 This tap differentiates itself from existing taps in a few ways. First, rather than expose a very specific set of configuration options for the underlying pymongo driver, we expose all possible arguments by accepting an object underneath the `mongo` key which pass all kwargs straight through to the driver. There are over 40 configurable kwargs available as seen [here](https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html#module-pymongo.mongo_client). This gives it more flexibility in contrast to a constrained interface. Secondly, this tap has two replication modes configurable via `infer_schema: true/false`. 
 
-- **Strategy 1** (`infer_schema: false`) merely outputs data with an `additonalProperties: true` schema. This is ideal for loading to unstructured sources such as blob storage or VARIANT/JSON columns. At worst, it can be loaded into a string column.
+- **Strategy 1** (`strategy: raw`) merely outputs data as-is with an `additonalProperties: true` schema. This is ideal for loading to unstructured sources such as blob storage where it may be preferable to keep documents exactly as they are. 
 
-- **Strategy 2** (`infer_schema: true`) infers the schema of each collection from a configurable sample size of records. This allows the tap to work with strongly typed destinations. This is an attractive option. Particularly when we don't expect the documents to vary dramatically.
+- **Strategy 2** (`strategy: envelope`) will wrap the document in a `document` key and output a fixed schema. The schema will use `type: object` and the target should be able to handle unstructured data, ie. via a VARIANT/JSON column.
+
+- **Strategy 3** (`strategy: infer`) infers the schema of each collection from a configurable sample size of records. This allows the tap to work with strongly typed destinations. This is an attractive option. Particularly when we don't expect the documents to vary dramatically.
 
 The last differentiator is the minimal code footprint in comparison to existing Mongo taps. I hope that this tap exemplifies how we can use as little code as possible with the existing plumbing in the SDK. The SDK means the tap supports the `BATCH` specification out of the box and is able to receive ongoing updates and improvements as the SDK continues to mature.
 

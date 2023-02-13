@@ -134,6 +134,9 @@ class TapMongoDB(Tap):
         # Defer to passed in catalog if available
         if self.input_catalog:
             return self.input_catalog.to_dict()
+        # Handle discovery in test mode
+        if "TAP_MONGO_TEST_NO_DB" in os.environ:
+            return {"streams": [{"tap_stream_id": "test", "stream": "test"}]}
         # If no catalog is provided, discover streams
         catalog = Catalog()
         client = MongoClient(**self.config["mongo"])
@@ -246,7 +249,22 @@ class TapMongoDB(Tap):
             # This is a hack to allow the tap to be tested without a MongoDB instance
             return [
                 CollectionStream(
-                    self, name="test", collection=MockCollection(name="test", schema={})
+                    tap=self,
+                    name="test",
+                    schema={
+                        "type": "object",
+                        "properties": {
+                            "_id": {
+                                "type": ["string", "null"],
+                                "description": "The document's _id",
+                            },
+                        },
+                        "additionalProperties": True,
+                    },
+                    collection=MockCollection(
+                        name="test",
+                        schema={},
+                    ),
                 )
             ]
         client = MongoClient(**self.config["mongo"])
