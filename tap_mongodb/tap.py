@@ -7,7 +7,6 @@ import orjson
 import genson
 import singer_sdk._singerlib.messages
 import singer_sdk.helpers._typing
-from bson.json_util import default  # noqa
 from pymongo.mongo_client import MongoClient
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
@@ -15,7 +14,7 @@ from singer_sdk._singerlib.catalog import Catalog, CatalogEntry
 
 from tap_mongodb.collection import CollectionStream, MockCollection
 
-BLANK = ""
+_BLANK = ""
 """A sentinel value to represent a blank value in the config."""
 
 # Monkey patch the singer lib to use orjson
@@ -33,8 +32,10 @@ def noop(*args, **kwargs) -> None:
 singer_sdk.helpers._typing._warn_unmapped_properties = noop
 
 
-def recursively_drop_required(schema):
-    """Recursively drop the required property from a schema."""
+def recursively_drop_required(schema: dict) -> None:
+    """Recursively drop the required property from a schema.
+
+    This is used to clean up genson generated schemas which are strict by default."""
     schema.pop("required", None)
     if "properties" in schema:
         for prop in schema["properties"]:
@@ -65,7 +66,7 @@ class TapMongoDB(Tap):
                 " shards/clusters via independent tap-mongodb configs. This is applied during"
                 " catalog generation. Regenerate the catalog to apply a new stream prefix."
             ),
-            default=BLANK,
+            default=_BLANK,
         ),
         th.Property(
             "optional_replication_key",
@@ -180,7 +181,7 @@ class TapMongoDB(Tap):
                     )
                     continue
                 self.logger.info("Discovered collection %s.%s", db_name, collection)
-                stream_prefix = self.config.get("stream_prefix", BLANK)
+                stream_prefix = self.config.get("stream_prefix", _BLANK)
                 stream_prefix += db_name.replace("-", "_").replace(".", "_")
                 stream_name = f"{stream_prefix}_{collection}"
                 entry = CatalogEntry.from_dict({"tap_stream_id": stream_name})
@@ -277,16 +278,16 @@ class TapMongoDB(Tap):
             raise RuntimeError("Could not connect to MongoDB") from e
         db_includes = self.config.get("database_includes", [])
         db_excludes = self.config.get("database_excludes", [])
-        for entry in self.catalog_dict["streams"]:
-            if entry["database_name"] in db_excludes:
+        for entry in self.catalog.streams:
+            if entry.database in db_excludes:
                 continue
-            if db_includes and entry["database_name"] not in db_includes:
+            if db_includes and entry.database not in db_includes:
                 continue
             stream = CollectionStream(
                 tap=self,
-                name=entry.get("stream", entry["tap_stream_id"]),
-                schema=entry["schema"],
-                collection=client[entry["database_name"]][entry["table_name"]],
+                name=entry.tap_stream_id,
+                schema=entry.schema,
+                collection=client[entry.database][entry.table],
             )
-            stream.apply_catalog(Catalog.from_dict(entry))
+            stream.apply_catalog(self.catalog)
             yield stream
