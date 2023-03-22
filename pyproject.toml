@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "<3.11,>=3.7.1"
+python = "<3.12,>=3.7.1"
 requests = ">=2.25.1"
 singer-sdk = ">=0.17.0"
 pymongo = { version = ">=4.3.3", extras = ["srv"] }
