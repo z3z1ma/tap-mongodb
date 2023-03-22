@@ -238,6 +238,7 @@ class TapMongoDB(Tap):
                 else:
                     raise RuntimeError(f"Unknown strategy {strategy}")
                 entry.schema = entry.schema.from_dict(schema)
+                entry.key_properties = ["_id"]
                 entry.metadata = entry.metadata.get_standard_metadata(
                     schema=schema, key_properties=["_id"]
                 )
