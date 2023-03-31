@@ -52,6 +52,10 @@ plugins:
           description:
             These props are passed directly to pymongo MongoClient allowing the
             tap user full flexibility not provided in any other Mongo tap.
+        - name: mongo_file_location
+          description:
+            Optional path to a YAML file containing the mongo configuration
+            properties.
       config:
         # All streams will be prefixed with `example_`
         stream_prefix: example_
