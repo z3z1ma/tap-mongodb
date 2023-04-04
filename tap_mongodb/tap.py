@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import orjson
 import genson
 import singer_sdk._singerlib.messages
 import singer_sdk.helpers._typing
+from pathlib import PurePath, Path
+from typing import Any
+import yaml
 from pymongo.mongo_client import MongoClient
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
@@ -57,6 +61,14 @@ class TapMongoDB(Tap):
                 "can be tuned."
             ),
             required=True,
+        ),
+        th.Property(
+            "mongo_file_location",
+            th.StringType,
+            description=(
+                "Optional file path, useful if reading mongo configuration from a file."
+            ),
+            default=_BLANK,
         ),
         th.Property(
             "stream_prefix",
@@ -122,6 +134,22 @@ class TapMongoDB(Tap):
         th.Property("batch_config", th.ObjectType()),
     ).to_dict()
 
+    def get_mongo_config(self) -> dict[str, Any]:
+        mongo_file_location = self.config.get("mongo_file_location", _BLANK)
+
+        if mongo_file_location != _BLANK:
+            if Path(mongo_file_location).is_file():
+                try:
+                    with open(mongo_file_location) as f:
+                        return yaml.safe_load(f)
+                except ValueError:
+                    self.logger.critical(
+                        f"The YAML mongo_file_location '{mongo_file_location}' has errors"
+                    )
+                    sys.exit(1)
+
+        return self.config["mongo"]
+
     @property
     def catalog_dict(self) -> dict:
         """Get catalog dictionary.
@@ -140,7 +168,7 @@ class TapMongoDB(Tap):
             return {"streams": [{"tap_stream_id": "test", "stream": "test"}]}
         # If no catalog is provided, discover streams
         catalog = Catalog()
-        client = MongoClient(**self.config["mongo"])
+        client = MongoClient(**self.get_mongo_config())
         try:
             client.server_info()
         except Exception as exc:
@@ -272,7 +300,7 @@ class TapMongoDB(Tap):
                     ),
                 )
             ]
-        client = MongoClient(**self.config["mongo"])
+        client = MongoClient(**self.get_mongo_config())
         try:
             client.server_info()
         except Exception as e:
