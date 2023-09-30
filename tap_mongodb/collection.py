@@ -78,7 +78,7 @@ class CollectionStream(Stream):
     # Disable timestamp replication keys. One caveat is this relies on an
     # alphanumerically sortable replication key. Python __gt__ and __lt__ are
     # used to compare the replication key values. This works for most cases.
-    is_timestamp_replication_key = False
+    is_timestamp_replication_key = True
 
     # No conformance level is set by default since this is a generic stream
     TYPE_CONFORMANCE_LEVEL = TypeConformanceLevel.NONE
@@ -124,7 +124,7 @@ class CollectionStream(Stream):
         return Timestamp(first_record.generation_time, first_record._inc)
 
     def get_records(self, context: dict | None) -> Iterable[dict]:
-        bookmark = self.get_starting_replication_key_value(context)
+        bookmark = self.get_starting_timestamp(context)
         for record in self._collection.find(
             {self.replication_key: {"$gt": bookmark}} if bookmark else {}
         ):
