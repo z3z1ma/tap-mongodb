@@ -18,6 +18,14 @@ plugins:
         - stream-maps
         - test
       settings:
+        - name: mongo
+          description:
+            These props are passed directly to pymongo MongoClient allowing the
+            tap user full flexibility not provided in any other Mongo tap.
+        - name: mongo_file_location
+          description:
+            Optional path to a YAML file containing the mongo configuration
+            properties.
         - name: stream_prefix
           description:
             Optionally add a prefix for all streams, useful if ingesting
@@ -27,6 +35,10 @@ plugins:
           description: |
             Make the replication key optional. If set to true, the tap will
             not fail if the replication key is not found in a document.
+        - name: is_timestamp_replication_key
+          description: |
+            This setting allows the tap to use a date-like incremental replication key, 
+            such as an usual `updatedAt`column.
           value: False
         - name: database_includes
           description: |
@@ -38,24 +50,26 @@ plugins:
             A list of databases to exclude. If this is set,
             all databases except those in this list will be replicated.
           value: []
-        - name: infer_schema
+        - name: strategy
           description: |
             If set to true, the tap will infer the schema from a sample of the
             documents in each collection. If set to false, the tap will
             use a default schema for each collection.
-          value: False
+          value: raw
+          options:
+            - label: raw
+              value: raw
+            - label: envelop
+              value: envelop
+            - label: infer
+              value: infer
         - name: infer_schema_max_docs
           description: |
             The maximum number of documents to use when inferring the schema.
           value: 2000
-        - name: mongo
-          description:
-            These props are passed directly to pymongo MongoClient allowing the
-            tap user full flexibility not provided in any other Mongo tap.
-        - name: mongo_file_location
-          description:
-            Optional path to a YAML file containing the mongo configuration
-            properties.
+        - name: stream_maps
+        - name: stream_map_config
+        - name: batch_config
       config:
         # All streams will be prefixed with `example_`
         stream_prefix: example_
