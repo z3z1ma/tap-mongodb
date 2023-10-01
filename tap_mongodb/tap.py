@@ -91,6 +91,15 @@ class TapMongoDB(Tap):
             default=False,
         ),
         th.Property(
+            "is_timestamp_replication_key",
+            th.BooleanType,
+            description=(
+                "This setting allows the tap to use a date-like incremental replication key," 
+                " such as an usual `updatedAt`column."
+            ),
+            default=False,
+        ),
+        th.Property(
             "database_includes",
             th.ArrayType(th.StringType),
             description=(
